@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AK DHL WORLD WIDE EXPRESS ADMIN</title>
+    <!-- JsBarcode Library for Real Barcodes -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        h2 { text-align: center; color: #111; margin-top: 0; font-size: 18px; }
+        
+        .no-print-section {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+        .form-group { margin-bottom: 10px; }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .row { display: flex; gap: 8px; }
+        .col { flex: 1; }
+        
+        .btn-container { margin-bottom: 15px; display: flex; gap: 10px; }
+        button {
+            flex: 1; padding: 14px; color: white; border: none;
+            border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+        .btn-blue { background: #007bff; }
+        .btn-blue:hover { background: #0056b3; }
+        .btn-logout { background: #dc3545; padding: 6px 12px; font-size: 12px; float: right; margin-bottom: 10px; }
+
+        /* History Section Styling */
+        .history-title { margin-top: 0; font-size: 16px; color: #333; font-weight: bold; }
+        .search-box { margin-bottom: 10px; padding: 8px; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .table-wrapper { overflow-x: auto; max-height: 250px; background: #fff; border: 1px solid #ddd; border-radius: 4px; }
+        .history-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+        .history-table th, .history-table td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .history-table th { background-color: #f1f1f1; position: sticky; top: 0; }
+        .btn-action { padding: 4px 8px; font-size: 11px; border-radius: 3px; cursor: pointer; font-weight: normal; box-shadow: none; margin-right: 2px; border: none; }
+        .btn-invoice { background: #17a2b8; color: white; }
+        .btn-print { background: #007bff; color: white; }
+        .btn-whatsapp { background: #25d366; color: white; }
+        .btn-delete { background: #dc3545; color: white; }
+
+        /* Preview container on Screen */
+        .print-area {
+            background: #fff;
+            padding: 5px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            overflow-x: auto;
+        }
+        
+        .slips-row-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .slip-preview {
+            border: 2px solid #000;
+            padding: 0;
+            background: #fff;
+            color: #000;
+            font-size: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .slip-row { display: flex; border-bottom: 1px solid #000; }
+        .slip-row:last-child { border-bottom: none; }
+        .slip-col { padding: 5px 6px; border-right: 1px solid #000; }
+        .slip-col:last-child { border-right: none; }
+        
+        .header-box { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 2px solid #000; }
+        .header-text h3 { margin: 0; font-size: 15px; text-transform: uppercase; font-weight: bold; }
+        .header-text p { margin: 1px 0; font-size: 11px; }
+        .header-service-badge { font-size: 18px; font-weight: 900; border: 2px solid #000; padding: 2px 8px; text-transform: uppercase; font-family: Impact, sans-serif; }
+
+        .title-label { font-weight: bold; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 2px; color: #222;}
+        .bold-text { font-weight: bold; font-size: 12px; }
+        
+        .barcode-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; }
+        .barcode-area svg { max-width: 100%; height: 40px; }
+
+        .scissor-line-vertical { display: none; }
+
+        /* Invoice Modal Styling */
+        #invoiceModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 99999;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .invoice-box {
+            background: #fff;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            color: #000;
+        }
+
+        /* PRINT / SAVE AS PDF (LANDSCAPE SIDE-BY-SIDE SETUP FOR 2 SLIPS) */
+        @media print {
+            @page { size: A4 landscape; margin: 4mm; }
+            body { background: white; margin: 0; padding: 0; }
+            
+            .no-print-section, .btn-container, h2, .history-section, .btn-logout, #invoiceModal { 
+                display: none !important; 
+            }
+            .container { 
+                box-shadow: none; 
+                padding: 4mm; 
+                max-width: 100%; 
+                width: 100%; 
+                margin: 0; 
+                border: 1px solid #000 !important;
+            }
+            #printArea { 
+                display: block !important; 
+                border: none !important; 
+                padding: 4mm !important; 
+            }
+            
+            .slips-row-container {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: flex-start !important;
+                width: 100% !important;
+                gap: 4mm !important;
+            }
+
+            .slip-preview {
+                width: 48.5% !important;
+                box-sizing: border-box !important;
+                page-break-inside: avoid;
+                border: 2px solid #000 !important;
+            }
+
+            .scissor-line-vertical {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: bold;
+                width: 3%;
+            }
+
+            /* INVOICE PRINT MODE */
+            body.invoice-print-mode #printArea,
+            body.invoice-print-mode .container {
+                display: none !important;
+            }
+            body.invoice-print-mode #invoiceModal {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                padding: 0 !important;
+                z-index: 999999;
+            }
+            body.invoice-print-mode .invoice-box {
+                box-shadow: none !important;
+                border: 1px solid #000 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 10px !important;
+            }
+            body.invoice-print-mode .no-print-invoice { display: none !important; }
+            body.invoice-print-mode .invoice-box input { border: none !important; background: transparent !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login / Sign Up Screen -->
+<div id="loginScreen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#f5f5f5;display:flex;justify-content:center;align-items:center;z-index:99999;">
+  <div style="background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px #999;text-align:center;width:320px;box-sizing:border-box;">
+    <h2 style="font-size:16px;">AK DHL WORLD WIDE EXPRESS</h2>
+    <p id="authTitle" style="font-weight:bold;margin:5px 0 15px 0;">Admin Login</p>
+
+    <div id="usernameGroup" style="display:none;margin-bottom:10px;">
+      <input type="text" id="regUsername" placeholder="Enter Username / Email" autocomplete="username" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;font-size:14px;">
+    </div>
+
+    <div style="position:relative;margin-bottom:10px;">
+      <input type="password" id="password" placeholder="Enter Password" autocomplete="current-password" style="width:100%;padding:10px;padding-right:40px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;font-size:14px;">
+      <span id="togglePassword" onclick="togglePasswordVisibility()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;display:flex;align-items:center;color:#666;">
+        <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+      </span>
+    </div>
+
+    <button id="authBtn" onclick="handleAuth()" style="width:100%;padding:10px;background:#007bff;color:white;border:none;border-radius:5px;font-weight:bold;cursor:pointer;font-size:15px;">Login</button>
+
+    <p id="msg" style="color:red;font-size:13px;margin:8px 0;"></p>
+
+    <p style="font-size:13px;margin-top:15px;color:#555;">
+      <span id="switchText">Don't have an account?</span> 
+      <a href="javascript:void(0);" onclick="toggleAuthMode()" id="switchBtn" style="color:#007bff;text-decoration:none;font-weight:bold;">Sign Up</a>
+    </p>
+  </div>
+</div>
+
+<div id="mainContent" style="display:none;">
+<div class="container">
+    <button class="btn-logout" onclick="logoutAdmin()">🚪 Logout</button>
+    <h2>AK WORLD WIDE EXPRESS ADMIN</h2>
+    
+    <div class="no-print-section">
+        <div class="row">
+            <div class="form-group col">
+                <label>Waybill Number</label>
+                <input type="text" id="inWaybill">
+            </div>
+            <div class="form-group col">
+                <label>Date</label>
+                <input type="text" id="inDate">
+            </div>
+            <div class="form-group col">
+                <label>Service</label>
+                <select id="inService">
+                    <option value="DHL">DHL</option>
+                    <option value="FedEx">FedEx</option>
+                    <option value="UPS">UPS</option>
+                    <option value="SKYNET">SKYNET</option>
+                    <option value="DOMESTIC">DOMESTIC</option>
+                </select>
+            </div>
+            <div class="form-group col">
+                <label>Type</label>
+                <select id="inDocType">
+                    <option value="Non-Docs">Non-Documents</option>
+                    <option value="Docs">Documents</option>
+                </select>
+            </div>
+        </div>
+        <hr>
+        <h3>Tracking Number</h3>
+        <div class="form-group">
+            <label>Tracking Number</label>
+            <input type="text" id="inTracking" placeholder="Optional">
+        </div>
+        <hr>
+        <h3>Shipper Details</h3>
+        <div class="form-group"><label>Shipper Name</label><input type="text" id="inShipName"></div>
+        <div class="form-group"><label>Shipper Address</label><input type="text" id="inShipAddr"></div>
+        <div class="form-group"><label>Shipper Contact</label><input type="text" id="inShipContact"></div>
+        <div class="form-group"><label>Shipper CNIC#</label><input type="text" id="inShipCNIC"></div>
+        <hr>
+        <h3>Receiver Details</h3>
+        <div class="form-group"><label>Receiver Name</label><input type="text" id="inRecName"></div>
+        <div class="form-group"><label>Receiver Street Address</label><textarea id="inRecAddr" rows="2"></textarea></div>
+        
+        <div class="row">
+            <div class="form-group col"><label>City</label><input type="text" id="inRecCity"></div>
+            <div class="form-group col"><label>Postal Code</label><input type="text" id="inRecPostal"></div>
+        </div>
+
+        <div class="form-group"><label>Country Name</label><input type="text" id="inRecCountry"></div>
+        <div class="form-group"><label>Receiver Contact</label><input type="text" id="inRecContact"></div>
+
+        <hr>
+        <h3>Shipment Details</h3>
+        <div class="form-group"><label>Product Details</label><textarea id="inProdDetails" rows="2"></textarea></div>
+        
+        <div class="row">
+            <div class="form-group col"><label>Value ($)</label><input type="text" id="inValue" value="3"></div>
+            <div class="form-group col"><label>NTN #</label><input type="text" id="inNTN"></div>
+        </div>
+
+        <div class="row" style="background: #e9ecef; padding: 10px; border-radius: 5px;">
+            <div class="form-group col"><label style="color:red; font-weight:bold;">Pieces</label><input type="text" id="inPieces"></div>
+            <div class="form-group col"><label style="color:red; font-weight:bold;">Volume</label><input type="text" id="inVol"></div>
+            <div class="form-group col"><label style="color:red; font-weight:bold;">Weight</label><input type="text" id="inWt"></div>
+            <div class="form-group col"><label style="color:red; font-weight:bold;">Price</label><input type="text" id="inPrice"></div>
+        </div>
+    </div>
+
+    <!-- Solid Print / Save as PDF Button -->
+    <div class="btn-container">
+        <button class="btn-blue" onclick="triggerMobilePrint()">🖨️ SAVE AS PDF (2 Slips Left & Right)</button>
+    </div>
+
+    <!-- HISTORY SECTION -->
+    <div class="no-print-section history-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="history-title">📜 Waybill History Record (Cloud & Offline Sync)</div>
+            <button onclick="showTodayHistory()" style="flex: unset; padding: 6px 12px; font-size: 12px; background: #28a745; box-shadow: none;">📅 Today's History</button>
+        </div>
+        <input type="text" id="searchHistory" class="search-box" placeholder="🔍 Search by Waybill or Receiver Name..." oninput="filterHistory()">
+        
+        <div class="table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Waybill</th>
+                        <th>Date</th>
+                        <th>Receiver</th>
+                        <th>Service</th>
+                        <th>Weight</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- Records will inject here via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Check Old History Button -->
+        <div style="margin-top: 10px;">
+            <button onclick="showOldHistory()" class="btn-blue" style="background: #6c757d; font-size: 13px; padding: 10px; width: 100%;">🔒 Check Old History (Password Required)</button>
+        </div>
+    </div>
+
+    <!-- PREVIEW AREA -->
+    <div id="printArea" class="print-area">
+        <div class="slips-row-container">
+           <!-- ================= SLIP 1 (LEFT IN PDF) ================= -->
+            <div class="slip-preview">
+                <div class="header-box">
+                    <div class="header-text">
+                        <h3>WORLD WIDE EXPRESS®️</h3>
+                        <p>LDA Avenue 1 Main Raiwind Road Lahore</p>
+                        <p>rajarabnwaz100@gmail.com</p>
+                        <p>03228073938 / 03101469911</p>
+                    </div>
+                    <div class="header-service-badge outServiceHeader">DHL</div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2;">
+                        <span class="title-label">Waybill</span>
+                        <div><span class="outDocType" style="font-weight: bold; text-transform: uppercase;">Non-Docs</span><br>Not to be attached to package</div>
+                        <div style="margin-top: 5px;" class="outDate1"></div>
+                    </div>                  
+                </div>
+                
+                <div class="slip-row tracking-row" style="display: none;">
+                    <div class="slip-col" style="flex: 2; border-right: none;">
+                        <span class="title-label">Tracking Number</span>
+                        <div class="bold-text outTracking"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2; border-right: none;">
+                        <span class="title-label"><b>SHIPPER</b></span>
+                        <div class="outShipName"></div>
+                        <div class="outShipCNIC"></div>
+                        <div class="outShipAddr"></div>                                           
+                        <div>Lahore - Pakistan</div>
+                    </div>
+                    <div class="slip-col" style="flex: 1; text-align: right;">
+                        <span class="title-label">Contact</span>
+                        <div class="bold-text outShipContact"></div>
+                        <span class="title-label" style="margin-top:5px;">NTN #</span>
+                        <div class="bold-text outNTN"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2; border-right: none;">
+                        <span class="title-label"><b>RECEIVER</b></span>
+                        <div class="outRecName"></div>
+                        <div class="outRecAddr" style="white-space: pre-line;"></div>
+                    </div>
+                    <div class="slip-col" style="flex: 1; text-align: right;">
+                        <span class="title-label">Contact</span>
+                        <div class="bold-text outRecContact"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2.5;">
+                        <span class="title-label">Product Details</span>
+                        <div class="outProdDetails" style="white-space: pre-line; margin-bottom: 3px;"></div>
+                    </div>
+                    <div class="slip-col" style="flex: 0.5; text-align: right;">
+                        <span class="title-label">Value</span>
+                        <div class="outValue" style="font-weight: bold; font-size: 13px;"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2; padding: 0;">
+                        <div style="display: flex; border-bottom: 1px solid #000; padding: 4px; font-weight: bold; font-size: 10px;">
+                            <div style="flex: 1;">Pieces</div>
+                            <div style="flex: 1; border-left: 1px solid #000; padding-left: 4px;">Volume</div>
+                            <div style="flex: 1.5; border-left: 1px solid #000; padding-left: 4px;">Weight</div>
+                        </div>
+                        <div style="display: flex; padding: 4px; font-size: 12px;">
+                            <div style="flex: 1;" class="outPieces"></div>
+                            <div style="flex: 1;" class="outVol"></div>
+                            <div style="flex: 1.5;" class="outWt"></div>
+                        </div>
+                    </div>
+                    <div class="slip-col" style="flex: 1.2; border-left: 1px solid #000;">
+                        <span class="title-label">Price</span>
+                        <div class="bold-text outPrice" style="font-size: 14px;"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row" style="min-height: 40px;">
+                    <div class="slip-col" style="flex: 1;"><span class="title-label">Name(Capital)</span></div>
+                    <div class="slip-col" style="flex: 1;"><span class="title-label">Signature</span></div>
+                    <div class="slip-col" style="flex: 1;">
+                        <span class="title-label">Date</span>
+                        <div style="margin-top: 5px;" class="outDate2"></div>
+                    </div>
+                </div>
+                <div class="barcode-area">
+                    <svg class="barcode-svg-1"></svg>
+                </div>
+            </div>
+
+            <!-- Central Split Line for Landscape PDF -->
+            <div class="scissor-line-vertical">✂</div>
+
+            <!-- ================= SLIP 2 (RIGHT IN PDF) ================= -->
+            <div class="slip-preview">
+                <div class="header-box">
+                    <div class="header-text">
+                        <h3>WORLD WIDE EXPRESS®️</h3>
+                        <p>LDA Avenue 1 Main Raiwind Road Lahore</p>
+                        <p>rajarabnwaz100@gmail.com</p>
+                        <p>03228073938 / 03101469911</p>
+                    </div>
+                    <div class="header-service-badge outServiceHeader">DHL</div>
+                </div>
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2;">
+                        <span class="title-label">Waybill</span>
+                        <div><span class="outDocType" style="font-weight: bold; text-transform: uppercase;">Non-Docs</span><br>Not to be attached to package</div>
+                        <div style="margin-top: 5px;" class="outDate1"></div>
+                    </div>                  
+                </div>
+                
+                <div class="slip-row tracking-row" style="display: none;">
+                    <div class="slip-col" style="flex: 2; border-right: none;">
+                        <span class="title-label">Tracking Number</span>
+                        <div class="bold-text outTracking"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2; border-right: none;">
+                        <span class="title-label"><b>SHIPPER</b></span>
+                        <div class="outShipName"></div>
+                        <div class="outShipCNIC"></div>
+                        <div class="outShipAddr"></div>                        
+                        <div>Lahore - Pakistan</div>
+                    </div>
+                    <div class="slip-col" style="flex: 1; text-align: right;">
+                        <span class="title-label">Contact</span>
+                        <div class="bold-text outShipContact"></div>
+                        <span class="title-label" style="margin-top:5px;">NTN #</span>
+                        <div class="bold-text outNTN"></div>
+                    </div>
+                </div>
+                
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2; border-right: none;">
+                        <span class="title-label"><b>RECEIVER</b></span>
+                        <div class="outRecName"></div>
+                        <div class="outRecAddr" style="white-space: pre-line;"></div>
+                    </div>
+                    <div class="slip-col" style="flex: 1; text-align: right;">
+                        <span class="title-label">Contact</span>
+                        <div class="bold-text outRecContact"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2.5;">
+                        <span class="title-label">Product Details</span>
+                        <div class="outProdDetails" style="white-space: pre-line; margin-bottom: 3px;"></div>
+                        <div class="outServiceWebsite" style="font-weight: bold;"></div>
+                    </div>
+                    <div class="slip-col" style="flex: 0.5; text-align: right;">
+                        <span class="title-label">Value</span>
+                        <div class="outValue" style="font-weight: bold; font-size: 13px;"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row">
+                    <div class="slip-col" style="flex: 2; padding: 0;">
+                        <div style="display: flex; border-bottom: 1px solid #000; padding: 4px; font-weight: bold; font-size: 10px;">
+                            <div style="flex: 1;">Pieces</div>
+                            <div style="flex: 1; border-left: 1px solid #000; padding-left: 4px;">Volume</div>
+                            <div style="flex: 1.5; border-left: 1px solid #000; padding-left: 4px;">Weight</div>
+                        </div>
+                        <div style="display: flex; padding: 4px; font-size: 12px;">
+                            <div style="flex: 1;" class="outPieces"></div>
+                            <div style="flex: 1;" class="outVol"></div>
+                            <div style="flex: 1.5;" class="outWt"></div>
+                        </div>
+                    </div>
+                    <div class="slip-col" style="flex: 1.2; border-left: 1px solid #000;">
+                        <span class="title-label">Price</span>
+                        <div class="bold-text outPrice" style="font-size: 14px;"></div>
+                    </div>
+                </div>
+
+                <div class="slip-row" style="min-height: 40px;">
+                    <div class="slip-col" style="flex: 1;"><span class="title-label">Name(Capital)</span></div>
+                    <div class="slip-col" style="flex: 1;"><span class="title-label">Signature</span></div>
+                    <div class="slip-col" style="flex: 1;">
+                        <span class="title-label">Date</span>
+                        <div style="margin-top: 5px;" class="outDate2"></div>
+                    </div>
+                </div>
+
+                <div class="barcode-area">
+                    <svg class="barcode-svg-2"></svg>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- INVOICE MODAL CONTAINER -->
+<div id="invoiceModal">
+    <div class="invoice-box" id="printableInvoiceBox">
+        
+        <!-- Top Center: AHMED LCS -->
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 6px;">
+            <div style="font-weight: bold; font-size: 16px; text-transform: uppercase;">AHMED LCS</div>
+            <div style="font-size: 9.5px; color: #222;">LDA Avenue 1 Main Raiwind Road Lahore</div>
+        </div>
+
+        <div style="text-align: center; font-weight: bold; font-size: 13px; text-decoration: underline; margin-bottom: 6px;">GIFT PROFORMA INVOICE</div>
+
+        <!-- Separate Boxes for Shipper and Consignee Details -->
+        <div style="display: flex; gap: 5px; margin-bottom: 6px;">
+            <!-- Shipper Box -->
+            <div style="flex: 1; border: 1px solid #000; padding: 6px;">
+                <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; margin-bottom: 4px; padding-bottom: 2px;">SHIPPER :</div>
+                <div id="invShipName" style="font-weight: bold; font-size: 11px;"></div>
+                <div id="invShipAddr" style="font-size: 10px; white-space: pre-line; margin-top: 2px;"></div>
+                <div style="margin-top: 3px; font-size: 10px;"><b>CNIC:</b> <span id="invShipCNIC"></span></div>
+            </div>
+            <!-- Consignee Box -->
+            <div style="flex: 1; border: 1px solid #000; padding: 6px;">
+                <div style="font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; margin-bottom: 4px; padding-bottom: 2px;">CONSIGNEE :</div>
+                <div id="invRecName" style="font-weight: bold; font-size: 11px;"></div>
+                <div id="invRecAddr" style="font-size: 10px; white-space: pre-line; margin-top: 2px;"></div>
+                <div style="font-size: 10px; margin-top: 3px;"><b>CONTACT:</b> <span id="invRecContact"></span></div>
+            </div>
+        </div>
+
+        <!-- Separate Boxes for Date, Invoice Number (Blank Box), Pieces, Weight -->
+        <div style="display: flex; gap: 5px; margin-bottom: 6px;">
+            <div style="flex: 1; border: 1px solid #000; padding: 4px; text-align: center;">
+                <div style="font-size: 9px; font-weight: bold; text-transform: uppercase;">Date</div>
+                <div id="invDate" style="font-size: 11px; margin-top: 2px;"></div>
+            </div>
+            <div style="flex: 1; border: 1px solid #000; padding: 4px; text-align: center;">
+                <div style="font-size: 9px; font-weight: bold; text-transform: uppercase;">Invoice Number</div>
+                <input type="text" id="invWaybillInput" style="width: 100%; border: none; background: transparent; text-align: center; font-size: 11px; font-weight: bold; margin-top: 2px; padding: 2px; box-sizing: border-box;" />
+            </div>
+            <div style="flex: 1; border: 1px solid #000; padding: 4px; text-align: center;">
+                <div style="font-size: 9px; font-weight: bold; text-transform: uppercase;">No. of Pieces</div>
+                <div id="invPieces" style="font-size: 11px; margin-top: 2px; font-weight: bold;"></div>
+            </div>
+            <div style="flex: 1; border: 1px solid #000; padding: 4px; text-align: center;">
+                <div style="font-size: 9px; font-weight: bold; text-transform: uppercase;">Total Weight</div>
+                <div id="invWt" style="font-size: 11px; margin-top: 2px; font-weight: bold;"></div>
+            </div>
+        </div>
+        
+        <!-- Table Goods Section (10 Rows) -->
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 0;">
+            <thead>
+                <tr style="background: #f1f1f1; text-align: center;">
+                    <th style="border: 1px solid #000; padding: 4px; width: 35px;">Serial #</th>
+                    <th style="border: 1px solid #000; padding: 4px;">Detailed Description of Goods</th>
+                    <th style="border: 1px solid #000; padding: 4px; width: 45px;">Qty.</th>
+                    <th style="border: 1px solid #000; padding: 4px; width: 65px;">Unit Value</th>
+                    <th style="border: 1px solid #000; padding: 4px; width: 75px;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: 1px solid #000; padding: 4px; text-align: center; vertical-align: top;">1</td>
+                    <td style="border: 1px solid #000; padding: 4px; vertical-align: top;"><span id="invProdDetails" style="white-space: pre-line;"></span></td>
+                    <td style="border: 1px solid #000; padding: 4px; text-align: center; vertical-align: top;" id="invPiecesQty"></td>
+                    <td style="border: 1px solid #000; padding: 4px; text-align: center; vertical-align: top;" id="invValueUnit"></td>
+                    <td style="border: 1px solid #000; padding: 4px; text-align: center; vertical-align: top;" id="invSubtotal"></td>
+                </tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">2</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">3</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">4</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">5</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">6</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">7</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">8</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">9</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+                <tr style="height: 15px;"><td style="border: 1px solid #000; text-align: center;">10</td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td></tr>
+            </tbody>
+        </table>
+
+        <!-- Footer Meta & Totals Section -->
+        <div style="display: flex; border-left: 2px solid #000; border-right: 2px solid #000; border-bottom: 2px solid #000; font-size: 10px;">
+            <div style="flex: 2; padding: 5px; border-right: 1px solid #000;">
+                <div><b>Country of Manufacture:</b> MADE IN PAKISTAN</div>
+                <div style="margin-top: 2px;"><b>Reason for Export:</b> GIFT TO CONSIGNEE</div>
+                <div style="margin-top: 2px; font-size: 9px; line-height: 1.1;"><b>Currency Code:</b> I/We hereby that the information on this invoice is true and correct and that the contents of this shipment are as stated above.</div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <div style="padding: 4px; border-bottom: 1px solid #000; display: flex; justify-content: space-between;">
+                    <span>Other:</span>
+                    <span>-</span>
+                </div>
+                <div style="padding: 4px; display: flex; justify-content: space-between; font-weight: bold; background: #f9f9f9;">
+                    <span>Invoice Total:</span>
+                    <span id="invInvoiceTotal"></span>
+                </div>
+            </div>
+        </div>
+
+          <!-- UndertakingSection with Completely Blank AWB Input--><div style="margin-top: 6px; border: 1px solid #000; padding: 5px 8px; font-size: 9.5px; line-height: 1.2;">
+            <div style="text-align: center; font-weight: bold; font-size: 10px; margin-bottom: 2px; text-decoration: underline;">UNDERTAKING</div>
+            <div style="text-align: center; font-weight: bold; margin-bottom: 2px;">TO WHOM IT MAY CONCERN</div>
+            I hereby declare that my shipment booked under AWB # <input type="text" id="invUndertakingWaybillInput" style="border: none; border-bottom: 1px solid #000; font-weight: bold; text-align: center; width: 120px; font-size: 10px; outline: none; background: transparent;" />, delivered at your Operations office does not contain any contraband material (Narcotics, arms, explosives, antiques, currency, prohibited items, etc.) is discovered from this shipment during inspection or which may be against the export policy order of the Government of Pakistan, I shall be held responsible.
+        </div>
+
+        <!-- Designation, Signature & Thumb Print Section -->
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px;">
+            <div>
+                Designation of Authorized Signatory: ________________________
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div>
+                    SIGNATURE: ____________________
+                </div>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    THUMB:____________
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Action Buttons -->
+    <div style="text-align: center; margin-top: 15px;" class="no-print-section no-print-invoice">
+        <button onclick="printInvoiceForm()" class="btn-blue" style="padding: 10px 25px; margin-right: 10px; font-size: 14px;">🖨️ Print Invoice</button>
+        <button onclick="sendWhatsAppInvoice()" style="padding: 10px 25px; background: #25d366; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; margin-right: 10px;">💬 Send to WhatsApp</button>
+        <button onclick="closeInvoiceModal()" style="padding: 10px 25px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">❌ Close</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // YOUR FIREBASE CONFIGURATION (SYNCED)
+    // ==========================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyA6q7EIIu1nMRP9mV791kmUXr4502zFD0I",
+        authDomain: "dhl-world-wide-express.firebaseapp.com",
+        databaseURL: "https://dhl-world-wide-express-default-rtdb.firebaseio.com",
+        projectId: "dhl-world-wide-express",
+        storageBucket: "dhl-world-wide-express.firebasestorage.app",
+        messagingSenderId: "839170849192",
+        appId: "1:839170849192:web:d3de23c497deb35bd8459d",
+        measurementId: "G-V02JKHXFGS"
+    };
+
+    let isFirebaseInitialized = false;
+    let db = null;
+    let currentInvoiceData = null;
+    let viewingOldHistory = false; // Tracks whether user is currently viewing old/locked history
+
+    try {
+        if (firebaseConfig.apiKey) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            isFirebaseInitialized = true;
+        }
+    } catch (e) {
+        console.log("Firebase initialization error, running offline fallback mode.", e);
+    }
+
+    // ==========================================
+    // AUTHENTICATION & TOGGLE LOGIC
+    // ==========================================
+    let isSignUpMode = false;
+
+    function togglePasswordVisibility() {
+        const pwdInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('togglePassword');
+        
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+        } else {
+            pwdInput.type = 'password';
+            toggleIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+        }
+    }
+
+    function toggleAuthMode() {
+        isSignUpMode = !isSignUpMode;
+        const authTitle = document.getElementById('authTitle');
+        const authBtn = document.getElementById('authBtn');
+        const switchText = document.getElementById('switchText');
+        const switchBtn = document.getElementById('switchBtn');
+        const usernameGroup = document.getElementById('usernameGroup');
+        document.getElementById('msg').innerText = '';
+
+        if (isSignUpMode) {
+            authTitle.innerText = 'Admin Sign Up';
+            authBtn.innerText = 'Sign Up';
+            switchText.innerText = 'Already have an account?';
+            switchBtn.innerText = 'Login';
+            usernameGroup.style.display = 'block';
+        } else {
+            authTitle.innerText = 'Admin Login';
+            authBtn.innerText = 'Login';
+            switchText.innerText = "Don't have an account?";
+            switchBtn.innerText = 'Sign Up';
+            usernameGroup.style.display = 'none';
+        }
+    }
+
+    function handleAuth() {
+        const pwd = document.getElementById('password').value.trim();
+        const msgEl = document.getElementById('msg');
+        
+        if (!pwd) {
+            msgEl.innerText = "Please enter password!";
+            return;
+        }
+
+        if (isSignUpMode) {
+            const username = document.getElementById('regUsername').value.trim();
+            if (!username) {
+                msgEl.innerText = "Please enter username/email!";
+                return;
+            }
+            
+            const userData = { username, password: pwd };
+            if (isFirebaseInitialized && db) {
+                db.ref('users/' + username.replace(/[.#$[\]]/g, '_')).set(userData, (error) => {
+                    if (error) {
+                        msgEl.style.color = 'red';
+                        msgEl.innerText = "Sign up failed!";
+                    } else {
+                        msgEl.style.color = 'green';
+                        msgEl.innerText = "Sign up successful! Please login.";
+                        setTimeout(() => { toggleAuthMode(); }, 1500);
+                    }
+                });
+            } else {
+                let users = JSON.parse(localStorage.getItem('worldwide_users')) || [];
+                if (users.some(u => u.username === username)) {
+                    msgEl.style.color = 'red';
+                    msgEl.innerText = "Username already exists!";
+                    return;
+                }
+                users.push(userData);
+                localStorage.setItem('worldwide_users', JSON.stringify(users));
+                msgEl.style.color = 'green';
+                msgEl.innerText = "Sign up successful! Please login.";
+                setTimeout(() => { toggleAuthMode(); }, 1500);
+            }
+        } else {
+            if (pwd === "raja monis 100 @") {
+                localStorage.setItem('worldwide_is_logged_in', 'true');
+                localStorage.setItem('worldwide_saved_password', pwd);
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("mainContent").style.display = "block";
+                return;
+            }
+
+            if (isFirebaseInitialized && db) {
+                db.ref('users').once('value', (snapshot) => {
+                    const users = snapshot.val();
+                    let found = false;
+                    if (users) {
+                        for (let key in users) {
+                            if (users[key].password === pwd) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (found) {
+                        localStorage.setItem('worldwide_is_logged_in', 'true');
+                        localStorage.setItem('worldwide_saved_password', pwd);
+                        document.getElementById("loginScreen").style.display = "none";
+                        document.getElementById("mainContent").style.display = "block";
+                    } else {
+                        msgEl.style.color = 'red';
+                        msgEl.innerText = "Wrong Password or Account not found!";
+                    }
+                });
+            } else {
+                let users = JSON.parse(localStorage.getItem('worldwide_users')) || [];
+                let foundUser = users.find(u => u.password === pwd);
+                if (foundUser) {
+                    localStorage.setItem('worldwide_is_logged_in', 'true');
+                    localStorage.setItem('worldwide_saved_password', pwd);
+                    document.getElementById("loginScreen").style.display = "none";
+                    document.getElementById("mainContent").style.display = "block";
+                } else {
+                    msgEl.style.color = 'red';
+                    msgEl.innerText = "Wrong Password!";
+                }
+            }
+        }
+    }
+
+    function logoutAdmin() {
+        localStorage.removeItem('worldwide_is_logged_in');
+        location.reload();
+    }
+
+    // ==========================================
+    // APP CORE FUNCTIONS
+    // ==========================================
+    function setAutomaticDate() {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yy = String(today.getFullYear()).slice(-2);
+        document.getElementById('inDate').value = `${dd}/${mm}/${yy}`;
+    }
+
+    function getTodayDateStr() {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yy = String(today.getFullYear()).slice(-2);
+        return `${dd}/${mm}/${yy}`;
+    }
+
+    function refreshCurrentHistoryView() {
+        let history = window.cachedHistory || JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+        const todayStr = getTodayDateStr();
+        if (viewingOldHistory) {
+            const oldHistory = history.filter(item => item.date !== todayStr);
+            displayHistory(oldHistory);
+        } else {
+            const todayHistory = history.filter(item => item.date === todayStr);
+            displayHistory(todayHistory);
+        }
+    }
+
+    function showTodayHistory() {
+        viewingOldHistory = false;
+        refreshCurrentHistoryView();
+    }
+
+    function showOldHistory() {
+        const pass = prompt("Enter password to view old history:");
+        if (pass === null) return;
+        if (pass.trim() !== "raja monis 100") {
+            alert("Incorrect Password! Old history access denied.");
+            return;
+        }
+        viewingOldHistory = true;
+        refreshCurrentHistoryView();
+    }
+
+    function setAutomaticWaybill() {
+        if (isFirebaseInitialized) {
+            db.ref('counter/lastWaybill').once('value', (snapshot) => {
+                let lastWaybill = snapshot.val();
+                if (!lastWaybill) {
+                    lastWaybill = "122220000";
+                    db.ref('counter/lastWaybill').set(lastWaybill);
+                }
+                document.getElementById('inWaybill').value = lastWaybill;
+                updateSlip();
+            });
+        } else {
+            let lastWaybill = localStorage.getItem('worldwide_last_waybill');
+            if (!lastWaybill) {
+                lastWaybill = "122220000";
+                localStorage.setItem('worldwide_last_waybill', lastWaybill);
+            }
+            document.getElementById('inWaybill').value = lastWaybill;
+            updateSlip();
+        }
+    }
+
+    function updateText(className, textValue) {
+        let elements = document.querySelectorAll('.' + className);
+        elements.forEach(el => {
+            el.innerText = textValue || '';
+        });
+    }
+    function updateSlip() {
+        const service = document.getElementById('inService').value;
+        updateText('outServiceHeader', service);
+        
+        const waybillVal = document.getElementById('inWaybill').value;
+        updateText('outWaybill', waybillVal);
+
+        const trackingVal = document.getElementById('inTracking').value.trim();
+        const trackingRows = document.querySelectorAll('.tracking-row');
+        trackingRows.forEach(row => {
+            if (trackingVal !== "") {
+                row.style.display = 'flex';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        updateText('outTracking', trackingVal);
+
+        updateText('outDate1', document.getElementById('inDate').value);
+        updateText('outDate2', document.getElementById('inDate').value); 
+        
+         updateText('outShipName', document.getElementById('inShipName').value);
+        updateText('outShipCNIC', document.getElementById('inShipCNIC').value);
+        updateText('outShipAddr', document.getElementById('inShipAddr').value);
+        updateText('outShipContact', document.getElementById('inShipContact').value);
+        
+        updateText('outRecName', document.getElementById('inRecName').value);
+        
+        const recAddr = document.getElementById('inRecAddr').value.trim();
+        const recCity = document.getElementById('inRecCity').value.trim();
+        const recPostal = document.getElementById('inRecPostal').value.trim();
+        const recCountry = document.getElementById('inRecCountry').value.trim();
+        
+        let fullRecAddress = recAddr;
+        let cityPostalLine = [recCity, recPostal].filter(Boolean).join(' - ');
+        if (cityPostalLine) {
+            fullRecAddress += (fullRecAddress ? '\n' : '') + cityPostalLine;
+        }
+        if (recCountry) {
+            fullRecAddress += (fullRecAddress ? '\n' : '') + recCountry;
+        }
+        updateText('outRecAddr', fullRecAddress);
+        updateText('outRecContact', document.getElementById('inRecContact').value);
+        
+        updateText('outProdDetails', document.getElementById('inProdDetails').value);
+        updateText('outNTN', document.getElementById('inNTN').value);
+
+        let rawValue = document.getElementById('inValue').value.trim();
+        rawValue = rawValue.replace(/\$/g, ''); 
+        if (rawValue !== "") { rawValue = '$' + rawValue; }
+        updateText('outValue', rawValue);
+        
+        updateText('outDocType', document.getElementById('inDocType').value);
+        
+        updateText('outPieces', document.getElementById('inPieces').value);
+        updateText('outVol', document.getElementById('inVol').value);
+        updateText('outWt', document.getElementById('inWt').value);
+        updateText('outPrice', document.getElementById('inPrice').value);
+        
+        if (waybillVal) {
+            try {
+                JsBarcode(".barcode-svg-1", waybillVal, {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 1.5,
+                    height: 35,
+                    displayValue: true,
+                    fontSize: 12,
+                    margin: 0
+                });
+                JsBarcode(".barcode-svg-2", waybillVal, {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 1.5,
+                    height: 35,
+                    displayValue: true,
+                    fontSize: 12,
+                    margin: 0
+                });
+            } catch(e) {
+                console.log(e);
+            }
+        }
+    }
+
+    function sendWhatsAppSlip(waybill) {
+        let history = window.cachedHistory || JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+        const item = history.find(r => r.waybill === waybill);
+        if (!item) return;
+
+        let defaultPhone = item.shipContact || '';
+        let userPhone = prompt("Enter WhatsApp number (Shipper contact pre-filled, you can edit):", defaultPhone);
+        if (userPhone === null) return;
+
+        let cleanPhone = userPhone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = '92' + cleanPhone.substring(1);
+        } else if (!cleanPhone.startsWith('92') && cleanPhone.length === 10) {
+            cleanPhone = '92' + cleanPhone;
+        }
+
+        const message = `*AK WORLD WIDE EXPRESS - Shipment Details*\n\n` +
+            `Waybill: *${item.waybill}*\n` +
+            `Service: *${item.service}*\n` +
+            `Date: ${item.date}\n` +
+            `Shipper: ${item.shipName || '---'} (${item.shipContact || '---'})\n` +
+            `Receiver: ${item.recName} (${item.recCity || ''})\n` +
+            `Destination: ${item.recCountry || '---'}\n` +
+            `Weight: ${item.wt || '---'} kg\n` +
+            `Pieces: ${item.pieces || '---'}\n` +
+            `Price: ${item.price || '---'}\n` +
+            `Product Details: ${item.prodDetails || '---'}\n\n` +
+            `Thank you for shipping with AK World Wide Express!`;
+
+        const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    }
+
+    function sendWhatsAppInvoice() {
+        if (!currentInvoiceData) return;
+
+        let defaultPhone = currentInvoiceData.shipContact || '';
+        let userPhone = prompt("Enter WhatsApp number (Shipper contact pre-filled, you can edit):", defaultPhone);
+        if (userPhone === null) return;
+
+        let cleanPhone = userPhone.replace(/\D/g, '');
+        if (cleanPhone.startsWith('0')) {
+            cleanPhone = '92' + cleanPhone.substring(1);
+        } else if (!cleanPhone.startsWith('92') && cleanPhone.length === 10) {
+            cleanPhone = '92' + cleanPhone;
+        }
+
+        const invNum = document.getElementById('invWaybillInput').value || currentInvoiceData.waybill;
+        const totalVal = currentInvoiceData.value ? (currentInvoiceData.value.startsWith('$') ? currentInvoiceData.value : '$' + currentInvoiceData.value) : '---';
+
+        const message = `*AHMED LCS - GIFT PROFORMA INVOICE*\n\n` +
+            `Invoice Number: *${invNum}*\n` +
+            `Date: ${currentInvoiceData.date}\n` +
+            `Shipper: ${currentInvoiceData.shipName || '---'} (${currentInvoiceData.shipContact || '---'})\n` +
+            `Consignee: ${currentInvoiceData.recName || '---'} (${currentInvoiceData.recContact || '---'})\n` +
+            `Pieces: ${currentInvoiceData.pieces || '---'}\n` +
+            `Total Weight: ${currentInvoiceData.wt || '---'} kg\n` +
+            `Invoice Total: ${totalVal}\n` +
+            `Product: ${currentInvoiceData.prodDetails || '---'}\n\n` +
+            `Thank you for shipping with Ahmed LCS!`;
+
+        const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+    }
+
+    // CONCURRENCY SAFE WAYBILL TRANSACTION FUNCTION
+    function triggerMobilePrint() {
+        updateSlip(); 
+
+        if (isFirebaseInitialized) {
+            db.ref('counter/lastWaybill').transaction(function(currentValue) {
+                let currentNum = currentValue ? parseInt(currentValue) : 122220000;
+                return String(currentNum + 1);
+            }, function(error, committed, snapshot) {
+                if (error) {
+                    alert("Waybill generation error! Dobara koshish karein.");
+                } else if (committed) {
+                    let freshWaybill = snapshot.val();
+                    document.getElementById('inWaybill').value = freshWaybill;
+                    updateSlip();
+                    
+                    // Save history with the guaranteed unique waybill
+                    saveToHistoryWithWaybill(freshWaybill);
+                    
+                    window.print();
+                }
+            });
+        } else {
+            let currentWaybill = parseInt(document.getElementById('inWaybill').value) || 122220000;
+            let nextWaybill = String(currentWaybill + 1);
+            document.getElementById('inWaybill').value = nextWaybill;
+            localStorage.setItem('worldwide_last_waybill', nextWaybill);
+            updateSlip();
+            
+            saveToHistoryWithWaybill(nextWaybill);
+            window.print();
+        }
+    }
+
+    function saveToHistoryWithWaybill(waybillNum) {
+        const record = {
+            waybill: waybillNum,
+            tracking: document.getElementById('inTracking').value,
+            date: document.getElementById('inDate').value,
+            service: document.getElementById('inService').value,
+            docType: document.getElementById('inDocType').value,
+            shipName: document.getElementById('inShipName').value,
+            shipAddr: document.getElementById('inShipAddr').value,
+            shipContact: document.getElementById('inShipContact').value,
+            shipCNIC: document.getElementById('inShipCNIC').value,
+            recName: document.getElementById('inRecName').value,
+            recAddr: document.getElementById('inRecAddr').value,
+            recCity: document.getElementById('inRecCity').value,
+            recPostal: document.getElementById('inRecPostal').value,
+            recCountry: document.getElementById('inRecCountry').value,
+            recContact: document.getElementById('inRecContact').value,
+            prodDetails: document.getElementById('inProdDetails').value,
+            value: document.getElementById('inValue').value,
+            ntn: document.getElementById('inNTN').value,
+            pieces: document.getElementById('inPieces').value,
+            vol: document.getElementById('inVol').value,
+            wt: document.getElementById('inWt').value,
+            price: document.getElementById('inPrice').value,
+            timestamp: Date.now()
+        };
+
+        if (isFirebaseInitialized) {
+            db.ref('slips/' + record.waybill).set(record);
+        } else {
+            let history = JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+            const existingIndex = history.findIndex(item => item.waybill === record.waybill);
+            if (existingIndex > -1) {
+                history[existingIndex] = record;
+            } else {
+                history.unshift(record);
+            }
+            localStorage.setItem('worldwide_slips_history', JSON.stringify(history));
+            refreshCurrentHistoryView();
+        }
+    }
+
+    function initHistoryListener() {
+        if (isFirebaseInitialized) {
+            db.ref('slips').on('value', (snapshot) => {
+                const data = snapshot.val();
+                let history = [];
+                if (data) {
+                    history = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+                }
+                window.cachedHistory = history;
+                refreshCurrentHistoryView();
+            });
+        } else {
+            let history = JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+            window.cachedHistory = history;
+            refreshCurrentHistoryView();
+        }
+    }
+
+    function displayHistory(historyToDisplay = null) {
+        let history = historyToDisplay !== null ? historyToDisplay : (window.cachedHistory || JSON.parse(localStorage.getItem('worldwide_slips_history')) || []);
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = '';
+
+        if (history.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#777;">No records found</td></tr>';
+            return;
+        }
+
+        history.forEach((item) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${item.waybill}</b></td>
+                <td>${item.date}</td>
+                <td>${item.recName || '---'}</td>
+                <td><span style="font-weight:bold; font-size:11px; border:1px solid #333; padding:1px 4px;">${item.service}</span></td>
+                <td>${item.wt ? item.wt + ' kg' : '---'} (${item.pieces || 0} Pc)</td>
+                <td><b>${item.price || '---'}</b></td>
+                <td>
+                    <button class="btn-action btn-invoice" onclick="openInvoiceModal('${item.waybill}')">Invoice Form</button>
+                    <button class="btn-action btn-print" onclick="printHistoryItem('${item.waybill}')">Print</button>
+                    <button class="btn-action btn-whatsapp" onclick="sendWhatsAppSlip('${item.waybill}')">WhatsApp</button>
+                    <button class="btn-action btn-delete" onclick="deleteHistoryItem('${item.waybill}')">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openInvoiceModal(waybill) {
+        let history = window.cachedHistory || JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+        const item = history.find(r => r.waybill === waybill);
+        if (!item) return;
+        currentInvoiceData = item;
+
+        document.getElementById('invShipName').innerText = item.shipName || '';
+        document.getElementById('invShipAddr').innerText = item.shipAddr || '';
+        document.getElementById('invShipCNIC').innerText = item.shipCNIC || '';
+        
+        document.getElementById('invRecName').innerText = item.recName || '';
+        
+        let fullRecAddr = item.recAddr || '';
+        let cityPostal = [item.recCity, item.recPostal].filter(Boolean).join(' - ');
+        if (cityPostal) fullRecAddr += (fullRecAddr ? '\n' : '') + cityPostal;
+        if (item.recCountry) fullRecAddr += (fullRecAddr ? '\n' : '') + item.recCountry;
+        document.getElementById('invRecAddr').innerText = fullRecAddr;
+        
+        document.getElementById('invRecContact').innerText = item.recContact || '';
+        document.getElementById('invDate').innerText = item.date || '';
+        
+        document.getElementById('invWaybillInput').value = '';
+        document.getElementById('invUndertakingWaybillInput').value = '';
+
+        document.getElementById('invPieces').innerText = item.pieces || '';
+        document.getElementById('invWt').innerText = (item.wt ? item.wt + ' kg' : '');
+        
+        document.getElementById('invProdDetails').innerText = item.prodDetails || '';
+        document.getElementById('invPiecesQty').innerText = item.pieces || '';
+        
+        let unitVal = item.value || '';
+        if (unitVal && !unitVal.startsWith('$')) unitVal = '$' + unitVal;
+        document.getElementById('invValueUnit').innerText = unitVal;
+        document.getElementById('invSubtotal').innerText = unitVal;
+        document.getElementById('invInvoiceTotal').innerText = unitVal;
+
+        document.getElementById('invoiceModal').style.display = 'block';
+    }
+
+    function closeInvoiceModal() {
+        document.getElementById('invoiceModal').style.display = 'none';
+    }
+
+    function printInvoiceForm() {
+        document.body.classList.add('invoice-print-mode');
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('invoice-print-mode');
+        }, 500);
+    }
+
+    function printHistoryItem(waybill) {
+        let history = window.cachedHistory || JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+        const item = history.find(r => r.waybill === waybill);
+        if (!item) return;
+
+        // Save the current active running waybill number so it doesn't get replaced by the old history waybill number
+        const currentWaybill = document.getElementById('inWaybill').value;
+
+        document.getElementById('inTracking').value = item.tracking || '';
+        document.getElementById('inDate').value = item.date;
+        document.getElementById('inService').value = item.service;
+        document.getElementById('inDocType').value = item.docType;
+        document.getElementById('inShipName').value = item.shipName;
+        document.getElementById('inShipAddr').value = item.shipAddr;
+        document.getElementById('inShipContact').value = item.shipContact;
+        document.getElementById('inShipCNIC').value = item.shipCNIC || '';
+        document.getElementById('inRecName').value = item.recName;
+        document.getElementById('inRecAddr').value = item.recAddr || '';
+        document.getElementById('inRecCity').value = item.recCity || '';
+        document.getElementById('inRecPostal').value = item.recPostal || '';
+        document.getElementById('inRecCountry').value = item.recCountry || '';
+        document.getElementById('inRecContact').value = item.recContact;
+        document.getElementById('inProdDetails').value = item.prodDetails;
+        document.getElementById('inValue').value = item.value;
+        document.getElementById('inNTN').value = item.ntn;
+        document.getElementById('inPieces').value = item.pieces;
+        document.getElementById('inVol').value = item.vol;
+        document.getElementById('inWt').value = item.wt;
+        document.getElementById('inPrice').value = item.price;
+
+        // Ensure current active running waybill number stays intact on the printed slip
+        document.getElementById('inWaybill').value = currentWaybill;
+
+        updateSlip();
+        setTimeout(() => {
+            window.print();
+        }, 100);
+    }
+
+    function deleteHistoryItem(waybill) {
+        const pass = prompt("Please enter password to delete record:");
+        if (pass === null) return;
+        if (pass !== "0310@raja") {
+            alert("Incorrect Password! Deletion cancelled.");
+            return;
+        }
+
+        if (confirm('Kya aap is record ko delete karna chahte hain?')) {
+            if (isFirebaseInitialized) {
+                db.ref('slips/' + waybill).remove();
+            } else {
+                let history = JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+                history = history.filter(r => r.waybill !== waybill);
+                localStorage.setItem('worldwide_slips_history', JSON.stringify(history));
+                refreshCurrentHistoryView();
+            }
+        }
+    }
+
+    function filterHistory() {
+        const query = document.getElementById('searchHistory').value.toLowerCase().trim();
+        let history = window.cachedHistory || JSON.parse(localStorage.getItem('worldwide_slips_history')) || [];
+        const todayStr = getTodayDateStr();
+        
+        // Restrict search scope strictly to the active view (Today vs Old/Locked history)
+        let activeHistoryPool = viewingOldHistory 
+            ? history.filter(item => item.date !== todayStr) 
+            : history.filter(item => item.date === todayStr);
+
+        if (query === '') {
+            displayHistory(activeHistoryPool);
+            return;
+        }
+
+        const filtered = activeHistoryPool.filter(item => {
+            return item.waybill.toLowerCase().includes(query) || 
+                   (item.recName && item.recName.toLowerCase().includes(query));
+        });
+        displayHistory(filtered);
+    }
+
+    window.onload = function() {
+        const savedPwd = localStorage.getItem('worldwide_saved_password');
+        if (savedPwd) {
+            document.getElementById('password').value = savedPwd;
+        }
+
+        document.getElementById('password').addEventListener('input', function() {
+            localStorage.setItem('worldwide_saved_password', this.value);
+        });
+
+        if (localStorage.getItem('worldwide_is_logged_in') === 'true') {
+            document.getElementById("loginScreen").style.display = "none";
+            document.getElementById("mainContent").style.display = "block";
+        }
+
+        setAutomaticDate();
+        setAutomaticWaybill();
+        initHistoryListener();
+        
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('input', updateSlip);
+            input.addEventListener('keyup', updateSlip);
+            input.addEventListener('change', updateSlip);
+        });
+        
+        updateSlip();
+    };
+</script>
+
+</body>
+</html>
